@@ -1,0 +1,69 @@
+services:
+  dlh-minio-nginx:
+    container_name: dlh-minio-nginx
+    hostname: dlh-minio-nginx
+    image: nginx:stable-perl
+    volumes:
+      - ./conf/nginx.conf:/etc/nginx/nginx.conf
+      - ../certs/${DOMAIN_NAME}.crt:/opt/certs/${DOMAIN_NAME}.crt:ro
+      - ../certs/${DOMAIN_NAME}.key:/opt/certs/${DOMAIN_NAME}.key:ro
+    ports:
+      - 80:80
+      - ${MINIO_CONSOLE_NGINX_PORT}:443
+      - ${MINIO_CLI_NGINX_PORT}:9000
+    environment:
+      - TZ=${TZ}
+    networks:
+      dlh-minio-network:
+        ipv4_address: 172.20.0.2
+    restart: always
+  dlh-minio:
+    container_name: dlh-minio
+    hostname: dlh-minio
+    image: minio/minio:RELEASE.2025-02-28T09-55-16Z
+    environment:
+      - MINIO_ROOT_USER=${MINIO_ROOT_USER}
+      - MINIO_ROOT_PASSWORD=${MINIO_ROOT_PASSWORD}
+      - TZ=${TZ}
+      #- MINIO_IDENTITY_OPENID_CONFIG_URL_PCJP_SSO=https://${DOMAIN_NAME}:${KEYCLOAK_PORT}/realms/${KEYCLOAK_MINIO_REALM}/.well-known/openid-configuration
+      #- MINIO_IDENTITY_OPENID_CLIENT_ID_PCJP_SSO=${KEYCLOAK_MINIO_CLIENT}
+      #- MINIO_IDENTITY_OPENID_CLIENT_SECRET_PCJP_SSO=${KEYCLOAK_MINIO_CLIENT_SECRET}
+      #- MINIO_IDENTITY_OPENID_DISPLAY_NAME_PCJP_SSO=MinIO_SSO
+      #- MINIO_IDENTITY_OPENID_SCOPES_PCJP_SSO=email
+      #  #- MINIO_IDENTITY_OPENID_SCOPES_PCJP_SSO="openid,email,preferred_username"
+      #- MINIO_IDENTITY_OPENID_REDIRECT_URI_DYNAMIC_PCJP_SSO=on
+      #- MINIO_AUDIT_KAFKA_ENABLE=on
+      #- MINIO_AUDIT_KAFKA_BROKERS=lets-note.lan:9092
+      #- MINIO_AUDIT_KAFKA_TOPIC=minio-notifications
+      #- MINIO_AUDIT_KAFKA_SASL_MECHANISM=plain
+      #- MINIO_AUDIT_KAFKA_TLS_SKIP_VERIFY=on
+      #- MINIO_AUDIT_WEBHOOK_ENABLE_PRIMARY=on
+      ##- MINIO_LOGGER_WEBHOOK_AUTH_TOKEN_PRIMARY=
+      #- MINIO_AUDIT_WEBHOOK_ENDPOINT_PRIMARY=https://hooks.slack.com/services/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
+      #- MINIO_LOGGER_WEBHOOK_ENABLE_PRIMARY=on
+      #- MINIO_LOGGER_WEBHOOK_AUTH_TOKEN_PRIMARY=
+      #- MINIO_LOGGER_WEBHOOK_ENDPOINT_PRIMARY=https://hooks.slack.com/services/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
+      #- MINIO_PROMETHEUS_AUTH_TYPE=public
+    volumes:
+      - dlh-minio-volume:/data/
+      - ./docker-entrypoint.sh:/usr/bin/docker-entrypoint.sh
+      - ../certs/${DOMAIN_NAME}.ca.crt:/root/.minio/certs/CAs/${DOMAIN_NAME}.ca.crt:ro
+      - ../certs/${DOMAIN_NAME}.ca.crt:/home/minio-user/.minio/certs/CAs/${DOMAIN_NAME}.ca.crt:ro
+    tty: true
+    networks:
+      dlh-minio-network:
+        ipv4_address: 172.20.0.3
+    command: ["server", "/data", "--console-address", ":9001","--certs-dir","/root/.minio/certs/CAs"]
+    restart: always
+    depends_on:
+      - dlh-minio-nginx
+volumes:
+  dlh-minio-volume:
+networks:
+  dlh-minio-network:
+    driver: bridge
+    ipam:
+      driver: default
+      config:
+      - subnet: 172.20.0.0/29
+        gateway: 172.20.0.1
