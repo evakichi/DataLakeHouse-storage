@@ -20,7 +20,7 @@ MINIO_ROOT_PASSWORD="Admin passwd for your MinIO"
 ```
   - ./PostgreSQL/.env  
 ```
-TZ="Asia/Tokyo"
+TZ="Your country's timezone."
 POSTGRES_PORT="Port for your PostgreSQL Server."
 DOMAIN_NAME="Hostname(FQDN)."
 POSTGRES_USERNAME="Admin name for your PostgreSQL."
